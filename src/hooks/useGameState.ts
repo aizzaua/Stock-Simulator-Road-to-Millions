@@ -9,7 +9,8 @@ import {
   Item,
   BagItem,
   LotteryPrize,
-  LotteryResult
+  LotteryResult,
+  Loan
 } from '../types';
 import { STOCKS } from '../data/stocks';
 import { SHOP_ITEMS, LOTTERY_CONFIGS, LOTTERY_ITEMS } from '../data/items';
@@ -29,6 +30,8 @@ const TARGET_CASH = 1000000;
 const TOTAL_DAYS = 750;
 const FEE_RATE = 0.001;
 const START_DATE = new Date('2023-01-03');
+const MAX_LOAN_AMOUNT = 10000;
+const LOAN_DURATION = 100;
 
 function getInitialState(): GameState {
   return {
@@ -47,7 +50,11 @@ function getInitialState(): GameState {
     selectedStockCode: null,
     toasts: [],
     dailyImpact: {},
-    bag: []
+    bag: [],
+    loan: null,
+    hasAppliedLoan: false,
+    hasTriggeredBankruptcy: false,
+    showBankruptcyAlert: false
   };
 }
 
@@ -419,6 +426,88 @@ export function useGameState() {
     };
   }, [gameState.bag, addToast]);
 
+  // 检查是否满足破产条件
+  const checkBankruptcyCondition = useCallback((state: GameState): boolean => {
+    // 没有任何股票
+    if (state.holdings.length > 0) return false;
+
+    // 背包里没有任何彩票
+    const hasLottery = state.bag.some(item => LOTTERY_ITEMS.some(li => li.id === item.id));
+    if (hasLottery) return false;
+
+    // 检查现金是否买不起任意一只股票（最少买1股，包含手续费）
+    const minStockPrice = Math.min(...STOCKS.map(stock => {
+      const history = state.stockHistory[stock.code];
+      if (!history || history.length === 0) return Infinity;
+      return history[history.length - 1].close;
+    }));
+
+    const canAffordAnyStock = state.cash >= minStockPrice * (1 + FEE_RATE);
+    return !canAffordAnyStock;
+  }, []);
+
+  // 申请破产贷款
+  const applyForLoan = useCallback((amount: number) => {
+    if (gameState.hasAppliedLoan) {
+      addToast('error', '一局游戏只能申请一次贷款');
+      return false;
+    }
+    if (amount > MAX_LOAN_AMOUNT) {
+      addToast('error', '贷款金额不能超过10000元');
+      return false;
+    }
+    if (amount <= 0) {
+      addToast('error', '贷款金额必须大于0');
+      return false;
+    }
+
+    const newLoan: Loan = {
+      amount,
+      borrowedDay: gameState.currentDay,
+      dueDay: gameState.currentDay + LOAN_DURATION
+    };
+
+    setGameState(prev => ({
+      ...prev,
+      cash: prev.cash + amount,
+      loan: newLoan,
+      hasAppliedLoan: true,
+      showBankruptcyAlert: false
+    }));
+
+    addToast('success', `成功获得贷款 ${amount.toLocaleString()} 元！请在 ${LOAN_DURATION} 天内还清`);
+    return true;
+  }, [gameState.hasAppliedLoan, gameState.currentDay, addToast]);
+
+  // 还款
+  const repayLoan = useCallback(() => {
+    if (!gameState.loan) {
+      addToast('error', '没有未偿还的贷款');
+      return false;
+    }
+    if (gameState.cash < gameState.loan.amount) {
+      addToast('error', '现金不足以偿还贷款');
+      return false;
+    }
+
+    setGameState(prev => ({
+      ...prev,
+      cash: prev.cash - prev.loan!.amount,
+      loan: null
+    }));
+
+    addToast('success', '贷款已还清！');
+    return true;
+  }, [gameState.loan, gameState.cash, addToast]);
+
+  // 关闭破产提示
+  const dismissBankruptcyAlert = useCallback(() => {
+    setGameState(prev => ({
+      ...prev,
+      showBankruptcyAlert: false
+    }));
+  }, []);
+
   // 推进到下一阶段
   const nextPhase = useCallback(() => {
     if (gameState.isGameOver) return;
@@ -465,6 +554,48 @@ export function useGameState() {
           };
         }
 
+        // 检查贷款是否到期
+        if (prev.loan && nextDay > prev.loan.dueDay) {
+          return {
+            ...prev,
+            isGameOver: true,
+            gameResult: 'lose',
+            gameOverReason: 'bankruptcy'
+          };
+        }
+
+        // 检查破产条件
+        const stateToCheck = { ...prev, currentDay: nextDay };
+        const isBankrupt = checkBankruptcyCondition(stateToCheck);
+
+        if (isBankrupt) {
+          if (prev.hasTriggeredBankruptcy) {
+            // 第二次触发，直接破产
+            return {
+              ...prev,
+              isGameOver: true,
+              gameResult: 'lose',
+              gameOverReason: 'bankruptcy'
+            };
+          } else if (!prev.hasAppliedLoan) {
+            // 第一次触发且没贷过款，弹出提示
+            return {
+              ...prev,
+              hasTriggeredBankruptcy: true,
+              showBankruptcyAlert: true,
+              currentPage: 'bank'
+            };
+          } else {
+            // 已经贷过款了，直接破产
+            return {
+              ...prev,
+              isGameOver: true,
+              gameResult: 'lose',
+              gameOverReason: 'bankruptcy'
+            };
+          }
+        }
+
         // 更新昨日资产
         setYesterdayAssets(currentTotalAssets);
 
@@ -506,7 +637,7 @@ export function useGameState() {
 
       return newState;
     });
-  }, [gameState.isGameOver]);
+  }, [gameState.isGameOver, checkBankruptcyCondition]);
 
   // 获取某只股票的持仓
   const getHolding = useCallback((code: string) => {
@@ -558,11 +689,17 @@ export function useGameState() {
     buyItem,
     useCrazyCola,
     useLottery,
+    applyForLoan,
+    repayLoan,
+    dismissBankruptcyAlert,
+    checkBankruptcyCondition,
     constants: {
       INITIAL_CASH,
       TARGET_CASH,
       TOTAL_DAYS,
-      FEE_RATE
+      FEE_RATE,
+      MAX_LOAN_AMOUNT,
+      LOAN_DURATION
     }
   };
 }

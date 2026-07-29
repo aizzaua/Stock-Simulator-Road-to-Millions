@@ -40,7 +40,7 @@ export interface News {
 
 export type StockSector = 'tech' | 'consumer' | 'entertainment';
 export type GamePhase = 'opening' | 'lunch' | 'closing';
-export type PageType = 'market' | 'portfolio' | 'news' | 'shop' | 'bag';
+export type PageType = 'market' | 'portfolio' | 'news' | 'shop' | 'bag' | 'bank';
 
 export interface Item {
   id: string;
@@ -55,11 +55,17 @@ export interface BagItem extends Item {
   quantity: number;
 }
 
+export interface Loan {
+  amount: number;
+  dueDay: number;
+  borrowedDay: number;
+}
+
 export interface GameState {
   isStarted: boolean;
   isGameOver: boolean;
   gameResult: 'win' | 'lose' | null;
-  gameOverReason?: 'timeout' | 'poison' | null;
+  gameOverReason?: 'timeout' | 'poison' | 'bankruptcy' | null;
   currentDay: number;
   currentPhase: GamePhase;
   currentDate: string;
@@ -72,6 +78,10 @@ export interface GameState {
   toasts: ToastMessage[];
   dailyImpact: { [code: string]: number };
   bag: BagItem[];
+  loan: Loan | null;
+  hasAppliedLoan: boolean;
+  hasTriggeredBankruptcy: boolean;
+  showBankruptcyAlert: boolean;
 }
 
 export interface ToastMessage {

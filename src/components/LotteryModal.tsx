@@ -90,8 +90,8 @@ export const LotteryModal: React.FC<LotteryModalProps> = ({
               </div>
             ) : (
               <div style={styles.amountZero}>
-              没中奖
-            </div>
+                没中奖
+              </div>
             )}
 
             {result.prize.multiplier > 0 && (
@@ -102,13 +102,14 @@ export const LotteryModal: React.FC<LotteryModalProps> = ({
 
             <div style={styles.footer}>
               <button
-              style={styles.confirmBtn}
-              onClick={onClose}
-            >
-              {result.isJackpot ? '太棒了！' : result.prize.multiplier > 0 ? '收下' : '继续努力'}
-            </button>
-          </div>
-          )}
+                style={styles.confirmBtn}
+                onClick={onClose}
+              >
+                {result.isJackpot ? '太棒了！' : result.prize.multiplier > 0 ? '收下' : '继续努力'}
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -201,10 +202,6 @@ const styles = {
     fontWeight: 700,
     cursor: 'pointer',
     transition: 'all 0.2s ease',
-    fontFamily: 'inherit',
-    '&:hover': {
-      transform: 'translateY(-2px)',
-      boxShadow: '0 8px 24px rgba(88, 166, 255, 0.3)'
-    }
+    fontFamily: 'inherit'
   }
 };
