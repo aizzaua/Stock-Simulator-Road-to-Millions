@@ -333,3 +333,4 @@ A: 重新开始吧，这就是投资的风险...😢
   <br>
   <sub>Made with ❤️ and TypeScript</sub>
 </div>
+禁止商用
