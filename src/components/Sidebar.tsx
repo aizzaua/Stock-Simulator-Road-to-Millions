@@ -1,12 +1,11 @@
 import React from 'react';
-import { PageType, Holding, StockHistory, BagItem } from '../types';
+import { PageType, Holding, StockHistory, BagItem, Loan } from '../types';
 import {
   formatCurrency,
   formatPercent,
   calculateMarketValue,
   calculateTotalAssets
 } from '../utils/format';
-import { STOCKS } from '../data/stocks';
 
 interface SidebarProps {
   currentPage: PageType;
@@ -18,6 +17,8 @@ interface SidebarProps {
   todayProfit: number;
   todayProfitPercent: number;
   totalProfitPercent: number;
+  loan: Loan | null;
+  currentDay: number;
   onPageChange: (page: PageType) => void;
 }
 
@@ -31,6 +32,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   todayProfit,
   todayProfitPercent,
   totalProfitPercent,
+  loan,
+  currentDay,
   onPageChange
 }) => {
   const totalAssets = calculateTotalAssets(cash, holdings, stockHistory);
@@ -45,6 +48,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { page: 'market' as const, icon: '📊', label: '市场行情' },
     { page: 'portfolio' as const, icon: '💼', label: '我的持仓', badge: holdings.length > 0 ? holdings.length : null },
     { page: 'news' as const, icon: '📰', label: '新闻资讯' },
+    { page: 'bank' as const, icon: '🏦', label: '银行' },
     { page: 'shop' as const, icon: '🏪', label: '神秘商城' },
     { page: 'bag' as const, icon: '🎒', label: '我的背包', badge: totalItems > 0 ? totalItems : null }
   ];
@@ -100,6 +104,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         </div>
       </div>
+
+      {/* 贷款信息卡片 */}
+      {loan && (
+        <div style={styles.loanCard}>
+          <div style={styles.loanTitle}>🏦 贷款</div>
+          <div style={styles.loanAmount}>
+            待还：{formatCurrency(loan.amount)}
+          </div>
+          <div style={{
+            ...styles.loanDays,
+            color: (loan.dueDay - currentDay) <= 30 ? '#f85149' : '#3fb950'
+          }}>
+            剩余：{loan.dueDay - currentDay}天
+          </div>
+        </div>
+      )}
 
       {/* 导航菜单 */}
       <nav style={styles.nav}>
@@ -227,6 +247,32 @@ const styles = {
     width: '1px',
     height: '40px',
     background: '#30363d'
+  },
+  loanCard: {
+    margin: '12px 16px 0 16px',
+    padding: '14px 16px',
+    background: 'linear-gradient(135deg, rgba(240, 136, 62, 0.15), rgba(240, 136, 62, 0.05))',
+    border: '1px solid rgba(240, 136, 62, 0.3)',
+    borderRadius: '12px',
+    display: 'flex' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const
+  },
+  loanTitle: {
+    fontSize: '12px',
+    fontWeight: 700,
+    color: '#f0883e',
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.5px'
+  },
+  loanAmount: {
+    fontSize: '13px',
+    fontWeight: 700,
+    color: '#f0f6fc'
+  },
+  loanDays: {
+    fontSize: '12px',
+    fontWeight: 700
   },
   nav: {
     flex: 1,

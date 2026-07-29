@@ -5,7 +5,7 @@ interface SettlementModalProps {
   isWin: boolean;
   finalAssets: number;
   days: number;
-  gameOverReason?: 'timeout' | 'poison' | null;
+  gameOverReason?: 'timeout' | 'poison' | 'bankruptcy' | null;
   onRestart: () => void;
 }
 
@@ -27,6 +27,9 @@ export const SettlementModal: React.FC<SettlementModalProps> = ({
     if (gameOverReason === 'poison') {
       return { text: '💀 可乐中毒！', color: '#f85149' };
     }
+    if (gameOverReason === 'bankruptcy') {
+      return { text: '🏚️ 破产清算！', color: '#f85149' };
+    }
     return { text: '⏰ 时间到！', color: '#f85149' };
   };
 
@@ -37,6 +40,9 @@ export const SettlementModal: React.FC<SettlementModalProps> = ({
     if (gameOverReason === 'poison') {
       return '你喝了疯狂的可乐后中毒倒地，游戏结束...<br/>真是乐极生悲啊！';
     }
+    if (gameOverReason === 'bankruptcy') {
+      return '山穷水尽，无力回天...<br/>投资有风险，下次请谨慎！';
+    }
     return '虽然没有达成目标，但你已经很棒了！';
   };
 
@@ -46,10 +52,11 @@ export const SettlementModal: React.FC<SettlementModalProps> = ({
     <div style={styles.overlay}>
       <div style={{
         ...styles.modal,
-        ...(gameOverReason === 'poison' ? styles.poisonModal : {})
+        ...(gameOverReason === 'poison' ? styles.poisonModal : {}),
+        ...(gameOverReason === 'bankruptcy' ? styles.bankruptcyModal : {})
       }}>
         <div style={styles.icon}>
-          {isWin ? '🎉' : gameOverReason === 'poison' ? '💀' : '⏰'}
+          {isWin ? '🎉' : gameOverReason === 'poison' ? '💀' : gameOverReason === 'bankruptcy' ? '🏚️' : '⏰'}
         </div>
         <h2 style={{ ...styles.title, color: title.color }}>
           {title.text}
@@ -77,6 +84,12 @@ export const SettlementModal: React.FC<SettlementModalProps> = ({
           <div style={styles.poisonNote}>
             <span style={styles.noteIcon}>💡</span>
             <span style={styles.noteText}>别灰心！可乐虽好，可不要贪杯哦~</span>
+          </div>
+        )}
+        {gameOverReason === 'bankruptcy' && (
+          <div style={styles.bankruptcyNote}>
+            <span style={styles.noteIcon}>💡</span>
+            <span style={styles.noteText}>别灰心！投资之路漫漫，机会永远都在！</span>
           </div>
         )}
 
@@ -120,6 +133,10 @@ const styles = {
   poisonModal: {
     borderColor: '#f85149',
     boxShadow: '0 24px 80px rgba(248, 81, 73, 0.2)'
+  },
+  bankruptcyModal: {
+    borderColor: '#f0883e',
+    boxShadow: '0 24px 80px rgba(240, 136, 62, 0.2)'
   },
   icon: {
     fontSize: '80px',
@@ -169,6 +186,17 @@ const styles = {
     padding: '12px 16px',
     background: 'rgba(248, 81, 73, 0.1)',
     border: '1px solid rgba(248, 81, 73, 0.2)',
+    borderRadius: '12px',
+    marginBottom: '24px'
+  },
+  bankruptcyNote: {
+    display: 'flex' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    gap: '8px',
+    padding: '12px 16px',
+    background: 'rgba(240, 136, 62, 0.1)',
+    border: '1px solid rgba(240, 136, 62, 0.2)',
     borderRadius: '12px',
     marginBottom: '24px'
   },

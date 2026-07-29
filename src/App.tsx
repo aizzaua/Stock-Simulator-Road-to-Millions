@@ -8,8 +8,10 @@ import { PortfolioPage } from './components/PortfolioPage';
 import { NewsPage } from './components/NewsPage';
 import { ShopPage } from './components/ShopPage';
 import { BagPage } from './components/BagPage';
+import { BankPage } from './components/BankPage';
 import { TradeModal } from './components/TradeModal';
 import { SettlementModal } from './components/SettlementModal';
+import { BankruptcyAlert } from './components/BankruptcyAlert';
 import { Toast } from './components/Toast';
 
 function App() {
@@ -26,13 +28,12 @@ function App() {
     buyStock,
     sellStock,
     nextPhase,
-    getHolding,
-    getCurrentPrice,
-    getChangePercent,
-    getTotalChangePercent,
     buyItem,
     useCrazyCola,
     useLottery,
+    applyForLoan,
+    repayLoan,
+    dismissBankruptcyAlert,
     constants
   } = useGameState();
 
@@ -99,6 +100,8 @@ function App() {
           todayProfit={todayProfit}
           todayProfitPercent={todayProfitPercent}
           totalProfitPercent={totalProfitPercent}
+          loan={gameState.loan}
+          currentDay={gameState.currentDay}
           onPageChange={setCurrentPage}
         />
 
@@ -142,6 +145,16 @@ function App() {
               onUseLottery={useLottery}
             />
           )}
+          {gameState.currentPage === 'bank' && (
+            <BankPage
+              cash={gameState.cash}
+              loan={gameState.loan}
+              hasAppliedLoan={gameState.hasAppliedLoan}
+              currentDay={gameState.currentDay}
+              onApplyLoan={applyForLoan}
+              onRepayLoan={repayLoan}
+            />
+          )}
         </div>
       </div>
 
@@ -164,6 +177,12 @@ function App() {
           days={gameState.currentDay}
           gameOverReason={gameState.gameOverReason}
           onRestart={restartGame}
+        />
+      )}
+
+      {gameState.showBankruptcyAlert && (
+        <BankruptcyAlert
+          onDismiss={dismissBankruptcyAlert}
         />
       )}
 

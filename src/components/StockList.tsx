@@ -7,7 +7,7 @@ interface StockListProps {
   selectedCode: string;
   stockHistory: StockHistory;
   onSelect: (code: string) => void;
-  onOpenTrade: (code: string) => void;
+  onOpenTrade: (code: string, type: 'buy' | 'sell') => void;
 }
 
 type FilterType = 'all' | StockSector;
@@ -94,7 +94,7 @@ export const StockList: React.FC<StockListProps> = ({
                 ...(isSelected ? styles.stockItemSelected : {})
               }}
               onClick={() => onSelect(stock.code)}
-              onDoubleClick={() => onOpenTrade(stock.code)}
+              onDoubleClick={() => onOpenTrade(stock.code, 'buy')}
             >
               <div style={styles.code}>{stock.code}</div>
               <div style={styles.name}>{stock.name}</div>
