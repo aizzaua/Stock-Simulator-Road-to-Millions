@@ -32,6 +32,7 @@ const FEE_RATE = 0.001;
 const START_DATE = new Date('2023-01-03');
 const MAX_LOAN_AMOUNT = 10000;
 const LOAN_DURATION = 100;
+const LOAN_INTEREST_RATE = 0.03;
 
 function getInitialState(): GameState {
   return {
@@ -448,6 +449,10 @@ export function useGameState() {
 
   // 申请破产贷款
   const applyForLoan = useCallback((amount: number) => {
+    if (gameState.cash > 0) {
+      addToast('error', '只有现金为0时才能申请贷款');
+      return false;
+    }
     if (gameState.hasAppliedLoan) {
       addToast('error', '一局游戏只能申请一次贷款');
       return false;
@@ -475,9 +480,9 @@ export function useGameState() {
       showBankruptcyAlert: false
     }));
 
-    addToast('success', `成功获得贷款 ${amount.toLocaleString()} 元！请在 ${LOAN_DURATION} 天内还清`);
+    addToast('success', `成功获得贷款 ${amount.toLocaleString()} 元！请在 ${LOAN_DURATION} 天内还清（含3%利息）`);
     return true;
-  }, [gameState.hasAppliedLoan, gameState.currentDay, addToast]);
+  }, [gameState.cash, gameState.hasAppliedLoan, gameState.currentDay, addToast]);
 
   // 还款
   const repayLoan = useCallback(() => {
@@ -485,18 +490,19 @@ export function useGameState() {
       addToast('error', '没有未偿还的贷款');
       return false;
     }
-    if (gameState.cash < gameState.loan.amount) {
-      addToast('error', '现金不足以偿还贷款');
+    const repayAmount = Math.ceil(gameState.loan.amount * (1 + LOAN_INTEREST_RATE));
+    if (gameState.cash < repayAmount) {
+      addToast('error', `现金不足以偿还贷款（需要 ${repayAmount.toLocaleString()} 元）`);
       return false;
     }
 
     setGameState(prev => ({
       ...prev,
-      cash: prev.cash - prev.loan!.amount,
+      cash: prev.cash - repayAmount,
       loan: null
     }));
 
-    addToast('success', '贷款已还清！');
+    addToast('success', `贷款已还清！偿还金额 ${repayAmount.toLocaleString()} 元（含3%利息）`);
     return true;
   }, [gameState.loan, gameState.cash, addToast]);
 
