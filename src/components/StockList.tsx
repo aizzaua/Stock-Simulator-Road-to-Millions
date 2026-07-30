@@ -70,14 +70,6 @@ export const StockList: React.FC<StockListProps> = ({
         </div>
       </div>
 
-      <div style={styles.tableHeader}>
-        <div style={styles.tableHeaderCell}>代码</div>
-        <div style={styles.tableHeaderCell}>名称</div>
-        <div style={styles.tableHeaderCell}>现价</div>
-        <div style={styles.tableHeaderCell}>涨跌</div>
-        <div style={styles.tableHeaderCell}>历史</div>
-      </div>
-
       <div style={styles.list}>
         {filteredStocks.map(stock => {
           const price = getCurrentPrice(stock.code);
@@ -96,14 +88,20 @@ export const StockList: React.FC<StockListProps> = ({
               onClick={() => onSelect(stock.code)}
               onDoubleClick={() => onOpenTrade(stock.code, 'buy')}
             >
-              <div style={styles.code}>{stock.code}</div>
-              <div style={styles.name}>{stock.name}</div>
-              <div style={styles.price}>{formatCurrency(price)}</div>
-              <div style={{ ...styles.change, color: changeColor }}>
-                {change >= 0 ? '+' : ''}{formatPercent(change)}
+              <div style={styles.leftSection}>
+                <div style={styles.code}>{stock.code}</div>
+                <div style={styles.name}>{stock.name}</div>
               </div>
-              <div style={styles.totalChange}>
-                {totalChange >= 0 ? '+' : ''}{formatPercent(totalChange)}
+              <div style={styles.rightSection}>
+                <div style={styles.priceRow}>
+                  <span style={styles.price}>{formatCurrency(price)}</span>
+                  <span style={{ ...styles.change, color: changeColor }}>
+                    {change >= 0 ? '+' : ''}{formatPercent(change)}
+                  </span>
+                </div>
+                <div style={styles.totalChange}>
+                  {totalChange >= 0 ? '+' : ''}{formatPercent(totalChange)}
+                </div>
               </div>
             </div>
           );
@@ -115,7 +113,7 @@ export const StockList: React.FC<StockListProps> = ({
 
 const styles = {
   container: {
-    width: '380px',
+    width: '340px',
     background: '#161b22',
     borderRadius: '16px',
     border: '1px solid #30363d',
@@ -126,81 +124,72 @@ const styles = {
   header: {
     background: '#21262d',
     borderBottom: '1px solid #30363d',
-    padding: '16px 20px'
+    padding: '14px 16px'
   },
   title: {
-    fontSize: '15px',
+    fontSize: '14px',
     fontWeight: 700,
     color: '#f0f6fc',
-    marginBottom: '12px'
+    marginBottom: '10px'
   },
   tabs: {
     display: 'flex' as const,
     flexWrap: 'wrap' as const,
-    gap: '8px'
-  },
-  tableHeader: {
-    display: 'grid' as const,
-    gridTemplateColumns: '70px 1fr 90px 90px 80px',
-    gap: '8px',
-    padding: '12px 20px',
-    background: '#21262d',
-    borderBottom: '1px solid #30363d',
-    position: 'sticky' as const,
-    top: 0,
-    zIndex: 1
-  },
-  tableHeaderCell: {
-    fontSize: '11px',
-    fontWeight: 700,
-    color: '#6e7681',
-    textTransform: 'uppercase' as const,
-    letterSpacing: '0.5px'
+    gap: '6px'
   },
   list: {
     flex: 1,
     overflowY: 'auto' as const
   },
   stockItem: {
-    display: 'grid' as const,
-    gridTemplateColumns: '70px 1fr 90px 90px 80px',
-    gap: '8px',
-    padding: '14px 20px',
+    display: 'flex' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+    padding: '12px 16px',
     borderBottom: '1px solid #30363d',
     cursor: 'pointer',
-    alignItems: 'center',
-    transition: 'all 0.15s ease',
-    '&:hover': {
-      background: '#21262d'
-    }
+    transition: 'all 0.15s ease'
   },
   stockItemSelected: {
     background: 'rgba(88, 166, 255, 0.1)',
     borderLeft: '3px solid #58a6ff'
   },
+  leftSection: {
+    display: 'flex' as const,
+    flexDirection: 'column' as const,
+    gap: '2px'
+  },
   code: {
-    fontSize: '14px',
+    fontSize: '13px',
     fontWeight: 700,
     color: '#58a6ff'
   },
   name: {
-    fontSize: '14px',
-    color: '#f0f6fc'
+    fontSize: '12px',
+    color: '#8b949e'
+  },
+  rightSection: {
+    display: 'flex' as const,
+    flexDirection: 'column' as const,
+    alignItems: 'flex-end' as const,
+    gap: '2px'
+  },
+  priceRow: {
+    display: 'flex' as const,
+    alignItems: 'center' as const,
+    gap: '8px'
   },
   price: {
     fontSize: '14px',
     fontWeight: 700,
-    color: '#f0f6fc',
-    textAlign: 'right' as const
+    color: '#f0f6fc'
   },
   change: {
-    fontSize: '14px',
-    fontWeight: 700,
-    textAlign: 'right' as const
+    fontSize: '13px',
+    fontWeight: 700
   },
   totalChange: {
-    fontSize: '12px',
-    color: '#8b949e',
-    textAlign: 'right' as const
+    fontSize: '11px',
+    color: '#6e7681'
   }
 };

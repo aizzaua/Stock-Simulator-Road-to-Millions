@@ -11,6 +11,7 @@ import { ShopPage } from './components/ShopPage';
 import { BagPage } from './components/BagPage';
 import { BankPage } from './components/BankPage';
 import { ProfilePage } from './components/ProfilePage';
+import { SettingsPage } from './components/SettingsPage';
 import { TradeModal } from './components/TradeModal';
 import { SettlementModal } from './components/SettlementModal';
 import { BankruptcyAlert } from './components/BankruptcyAlert';
@@ -127,6 +128,8 @@ function App() {
         day={gameState.currentDay}
         totalDays={constants.TOTAL_DAYS}
         phase={gameState.currentPhase}
+        currentPage={gameState.currentPage}
+        onPageChange={setCurrentPage}
         onNext={nextPhase}
       />
 
@@ -200,6 +203,11 @@ function App() {
             <ProfilePage
               records={records}
               stats={stats}
+            />
+          )}
+          {gameState.currentPage === 'settings' && (
+            <SettingsPage
+              records={records}
               onExport={exportData}
               onImport={handleImport}
               onClear={clearRecords}

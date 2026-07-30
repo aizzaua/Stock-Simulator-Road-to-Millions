@@ -40,7 +40,7 @@ export interface News {
 
 export type StockSector = 'tech' | 'consumer' | 'entertainment';
 export type GamePhase = 'opening' | 'lunch' | 'closing';
-export type PageType = 'market' | 'portfolio' | 'news' | 'shop' | 'bag' | 'bank' | 'profile';
+export type PageType = 'market' | 'portfolio' | 'news' | 'shop' | 'bag' | 'bank' | 'profile' | 'settings';
 
 export interface GameRecord {
   id: string;
