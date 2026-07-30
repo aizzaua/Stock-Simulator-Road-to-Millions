@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React from 'react';
 import { GameRecord } from '../types';
 import { formatCurrency, formatPercent } from '../utils/format';
 
@@ -11,47 +11,12 @@ interface ProfilePageProps {
     avgHundredDayReturn: number;
     bestReturn: number;
   };
-  onExport: () => void;
-  onImport: (file: File) => Promise<void>;
-  onClear: () => void;
 }
 
 export const ProfilePage: React.FC<ProfilePageProps> = ({
   records,
-  stats,
-  onExport,
-  onImport,
-  onClear
+  stats
 }) => {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [showClearConfirm, setShowClearConfirm] = useState(false);
-
-  const handleImportClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      try {
-        await onImport(file);
-      } catch (err) {
-        alert('导入失败：' + (err as Error).message);
-      }
-      e.target.value = '';
-    }
-  };
-
-  const handleClear = () => {
-    if (showClearConfirm) {
-      onClear();
-      setShowClearConfirm(false);
-    } else {
-      setShowClearConfirm(true);
-      setTimeout(() => setShowClearConfirm(false), 3000);
-    }
-  };
-
   const profitColor = (val: number) => val >= 0 ? '#3fb950' : '#f85149';
 
   const formatDate = (timestamp: number) => {
@@ -75,34 +40,10 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   return (
     <div style={styles.container}>
       <div style={styles.header}>
-        <div style={styles.headerLeft}>
-          <div style={styles.title}>📊 我的统计</div>
+        <div style={styles.headerIcon}>📊</div>
+        <div>
+          <div style={styles.title}>个人统计</div>
           <div style={styles.subtitle}>记录你的投资之旅</div>
-        </div>
-        <div style={styles.actions}>
-          <button className="btn btn-secondary" style={styles.actionBtn} onClick={onExport}>
-            📤 导出数据
-          </button>
-          <button className="btn btn-secondary" style={styles.actionBtn} onClick={handleImportClick}>
-            📥 导入数据
-          </button>
-          <button
-            className="btn btn-secondary"
-            style={{
-              ...styles.actionBtn,
-              ...(showClearConfirm ? styles.clearBtnActive : {})
-            }}
-            onClick={handleClear}
-          >
-            {showClearConfirm ? '⚠️ 确认清除' : '🗑️ 清除数据'}
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".json"
-            style={{ display: 'none' }}
-            onChange={handleFileChange}
-          />
         </div>
       </div>
 
@@ -201,64 +142,59 @@ const styles = {
   container: {
     height: '100%',
     overflowY: 'auto' as const,
-    padding: '8px'
+    padding: '8px',
+    maxWidth: '900px',
+    width: '100%',
+    margin: '0 auto'
   },
   header: {
     display: 'flex' as const,
-    justifyContent: 'space-between' as const,
     alignItems: 'center' as const,
-    marginBottom: '24px'
+    gap: '16px',
+    marginBottom: '24px',
+    padding: '20px',
+    background: 'linear-gradient(135deg, rgba(88, 166, 255, 0.15), rgba(88, 166, 255, 0.05))',
+    border: '1px solid rgba(88, 166, 255, 0.25)',
+    borderRadius: '16px'
   },
-  headerLeft: {},
+  headerIcon: {
+    fontSize: '40px'
+  },
   title: {
-    fontSize: '24px',
+    fontSize: '22px',
     fontWeight: 800,
     color: '#f0f6fc',
     marginBottom: '4px'
   },
   subtitle: {
-    fontSize: '14px',
-    color: '#8b949e'
-  },
-  actions: {
-    display: 'flex' as const,
-    gap: '12px'
-  },
-  actionBtn: {
-    padding: '10px 16px',
     fontSize: '13px',
-    fontWeight: 600
-  },
-  clearBtnActive: {
-    background: 'rgba(248, 81, 73, 0.1)',
-    borderColor: '#f85149',
-    color: '#f85149'
+    color: '#8b949e'
   },
   statsGrid: {
     display: 'grid' as const,
     gridTemplateColumns: 'repeat(5, 1fr)',
-    gap: '16px',
+    gap: '14px',
     marginBottom: '24px'
   },
   statCard: {
     background: 'linear-gradient(135deg, rgba(88, 166, 255, 0.1), rgba(88, 166, 255, 0.02))',
     border: '1px solid rgba(88, 166, 255, 0.2)',
     borderRadius: '16px',
-    padding: '20px 16px',
+    padding: '18px 14px',
     textAlign: 'center' as const
   },
   statIcon: {
-    fontSize: '32px',
+    fontSize: '28px',
     marginBottom: '8px'
   },
   statValue: {
-    fontSize: '24px',
+    fontSize: '20px',
     fontWeight: 800,
     color: '#f0f6fc',
     marginBottom: '4px'
   },
   statLabel: {
-    fontSize: '12px',
+    fontSize: '11px',
     fontWeight: 600,
     color: '#8b949e',
     textTransform: 'uppercase' as const,
@@ -266,25 +202,25 @@ const styles = {
   },
   recordsSection: {},
   sectionTitle: {
-    fontSize: '16px',
+    fontSize: '15px',
     fontWeight: 700,
     color: '#f0f6fc',
-    marginBottom: '16px'
+    marginBottom: '12px'
   },
   emptyState: {
     textAlign: 'center' as const,
     padding: '60px 20px',
-    background: '#21262d',
+    background: '#161b22',
     border: '1px solid #30363d',
     borderRadius: '16px'
   },
   emptyIcon: {
-    fontSize: '48px',
+    fontSize: '40px',
     marginBottom: '16px'
   },
   emptyText: {
-    fontSize: '16px',
-    fontWeight: 600,
+    fontSize: '15px',
+    fontWeight: 700,
     color: '#f0f6fc',
     marginBottom: '8px'
   },
@@ -295,13 +231,13 @@ const styles = {
   recordsList: {
     display: 'flex' as const,
     flexDirection: 'column' as const,
-    gap: '12px'
+    gap: '10px'
   },
   recordCard: {
-    background: '#21262d',
+    background: '#161b22',
     border: '1px solid #30363d',
     borderRadius: '14px',
-    padding: '16px 20px',
+    padding: '14px 18px',
     display: 'flex' as const,
     justifyContent: 'space-between' as const,
     alignItems: 'center' as const
@@ -312,38 +248,38 @@ const styles = {
     gap: '14px'
   },
   recordIcon: {
-    fontSize: '32px',
-    width: '48px',
-    height: '48px',
+    fontSize: '28px',
+    width: '44px',
+    height: '44px',
     display: 'flex' as const,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
-    background: '#161b22',
+    background: '#0d1117',
     borderRadius: '12px',
     border: '1px solid #30363d'
   },
   recordInfo: {},
   recordResult: {
-    fontSize: '15px',
+    fontSize: '14px',
     fontWeight: 700,
     color: '#f0f6fc',
-    marginBottom: '4px'
+    marginBottom: '3px'
   },
   recordDate: {
-    fontSize: '12px',
+    fontSize: '11px',
     color: '#8b949e'
   },
   recordRight: {},
   recordStats: {
     display: 'flex' as const,
-    gap: '24px'
+    gap: '20px'
   },
   recordStat: {
     textAlign: 'right' as const
   },
   recordStatLabel: {
-    display: 'block',
-    fontSize: '11px',
+    display: 'block' as const,
+    fontSize: '10px',
     fontWeight: 600,
     color: '#6e7681',
     textTransform: 'uppercase' as const,
@@ -351,8 +287,8 @@ const styles = {
     marginBottom: '2px'
   },
   recordStatValue: {
-    display: 'block',
-    fontSize: '14px',
+    display: 'block' as const,
+    fontSize: '13px',
     fontWeight: 700,
     color: '#f0f6fc'
   }

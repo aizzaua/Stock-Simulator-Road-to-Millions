@@ -50,8 +50,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { page: 'news' as const, icon: '📰', label: '新闻资讯' },
     { page: 'bank' as const, icon: '🏦', label: '银行' },
     { page: 'shop' as const, icon: '🏪', label: '神秘商城' },
-    { page: 'bag' as const, icon: '🎒', label: '我的背包', badge: totalItems > 0 ? totalItems : null },
-    { page: 'profile' as const, icon: '📊', label: '个人统计' }
+    { page: 'bag' as const, icon: '🎒', label: '我的背包', badge: totalItems > 0 ? totalItems : null }
   ];
 
   return (
