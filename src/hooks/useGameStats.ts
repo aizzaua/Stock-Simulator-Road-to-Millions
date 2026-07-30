@@ -59,16 +59,43 @@ export const useGameStats = () => {
       ? Math.max(...records.map(r => r.hundredDayReturn))
       : 0;
 
+    const bestFinalAssets = totalGames > 0
+      ? Math.max(...records.map(r => r.finalAssets))
+      : 0;
+
+    const winRecords = records.filter(r => r.isWin);
+    const shortestWinDays = winRecords.length > 0
+      ? Math.min(...winRecords.map(r => r.days))
+      : 0;
+
+    const totalPlayDays = records.reduce((sum, r) => sum + r.days, 0);
+    const totalFinalAssets = records.reduce((sum, r) => sum + r.finalAssets, 0);
+    const totalGameDays = totalPlayDays;
+
     const winRate = totalGames > 0 ? (wins / totalGames) * 100 : 0;
 
-    return { totalGames, wins, winRate, avgHundredDayReturn, bestReturn };
+    return {
+      totalGames,
+      wins,
+      winRate,
+      avgHundredDayReturn,
+      bestReturn,
+      bestFinalAssets,
+      shortestWinDays,
+      totalPlayDays,
+      totalFinalAssets,
+      totalGameDays
+    };
   }, [records]);
 
   const exportData = useCallback(() => {
+    const achievementsData = localStorage.getItem('stock_simulator_achievements');
+    const achievements = achievementsData ? JSON.parse(achievementsData) : [];
     const data: ExportData = {
       version: '1.0',
       exportTime: new Date().toISOString(),
-      records
+      records,
+      achievements
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -89,6 +116,9 @@ export const useGameStats = () => {
           const content = e.target?.result as string;
           const data = JSON.parse(content) as ExportData;
           if (data.version && Array.isArray(data.records)) {
+            if (data.achievements && Array.isArray(data.achievements)) {
+              localStorage.setItem('stock_simulator_achievements', JSON.stringify(data.achievements));
+            }
             resolve(data.records);
           } else {
             reject(new Error('无效的数据格式'));

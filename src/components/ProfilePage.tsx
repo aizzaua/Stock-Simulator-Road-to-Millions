@@ -1,6 +1,7 @@
-import React from 'react';
-import { GameRecord } from '../types';
+import React, { useState } from 'react';
+import { GameRecord, Achievement, AchievementState } from '../types';
 import { formatCurrency, formatPercent } from '../utils/format';
+import { AchievementList } from './AchievementList';
 
 interface ProfilePageProps {
   records: GameRecord[];
@@ -10,13 +11,31 @@ interface ProfilePageProps {
     winRate: number;
     avgHundredDayReturn: number;
     bestReturn: number;
+    bestFinalAssets: number;
+    totalFinalAssets: number;
+    totalGameDays: number;
   };
+  achievementStats: {
+    unlockedBasic: number;
+    totalBasic: number;
+    unlockedHidden: number;
+    totalHidden: number;
+  };
+  achievements: Achievement[];
+  achievementStates: AchievementState[];
+  newUnlocks: string[];
 }
 
 export const ProfilePage: React.FC<ProfilePageProps> = ({
   records,
-  stats
+  stats,
+  achievementStats,
+  achievements,
+  achievementStates,
+  newUnlocks
 }) => {
+  const [showAchievements, setShowAchievements] = useState(false);
+
   const profitColor = (val: number) => val >= 0 ? '#3fb950' : '#f85149';
 
   const formatDate = (timestamp: number) => {
@@ -40,10 +59,34 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   return (
     <div style={styles.container}>
       <div style={styles.header}>
-        <div style={styles.headerIcon}>📊</div>
-        <div>
+        <button
+          style={styles.achievementBtn}
+          onClick={() => setShowAchievements(true)}
+        >
+          <span style={styles.achievementIcon}>🏆</span>
+          <span style={styles.achievementCount}>
+            {achievementStats.unlockedBasic}/{achievementStats.totalBasic}
+          </span>
+        </button>
+        <div style={styles.headerMain}>
           <div style={styles.title}>个人统计</div>
           <div style={styles.subtitle}>记录你的投资之旅</div>
+        </div>
+        <div style={styles.headerRight}>
+          <div style={styles.achievementSummary}>
+            <div style={styles.achievementSummaryRow}>
+              <span style={styles.achievementSummaryLabel}>基础</span>
+              <span style={styles.achievementSummaryValue}>
+                {achievementStats.unlockedBasic}/{achievementStats.totalBasic}
+              </span>
+            </div>
+            <div style={styles.achievementSummaryRow}>
+              <span style={styles.achievementSummaryLabel}>隐藏</span>
+              <span style={styles.achievementSummaryValue}>
+                {achievementStats.unlockedHidden}/{achievementStats.totalHidden}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -59,18 +102,14 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
           <div style={styles.statLabel}>通关次数</div>
         </div>
         <div style={styles.statCard}>
-          <div style={styles.statIcon}>📈</div>
-          <div style={{ ...styles.statValue, color: profitColor(stats.winRate) }}>
-            {stats.winRate.toFixed(1)}%
-          </div>
-          <div style={styles.statLabel}>通关率</div>
+          <div style={styles.statIcon}>💰</div>
+          <div style={styles.statValue}>{formatCurrency(stats.totalFinalAssets)}</div>
+          <div style={styles.statLabel}>累计总资产</div>
         </div>
         <div style={styles.statCard}>
-          <div style={styles.statIcon}>📊</div>
-          <div style={{ ...styles.statValue, color: profitColor(stats.avgHundredDayReturn) }}>
-            {stats.avgHundredDayReturn >= 0 ? '+' : ''}{formatPercent(stats.avgHundredDayReturn)}
-          </div>
-          <div style={styles.statLabel}>平均百日收益</div>
+          <div style={styles.statIcon}>📅</div>
+          <div style={styles.statValue}>{stats.totalGameDays}</div>
+          <div style={styles.statLabel}>累计游戏天数</div>
         </div>
         <div style={styles.statCard}>
           <div style={styles.statIcon}>🚀</div>
@@ -134,6 +173,14 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
           </div>
         )}
       </div>
+
+      <AchievementList
+        isOpen={showAchievements}
+        onClose={() => setShowAchievements(false)}
+        achievements={achievements}
+        states={achievementStates}
+        newUnlocks={newUnlocks}
+      />
     </div>
   );
 };
@@ -157,8 +204,34 @@ const styles = {
     border: '1px solid rgba(88, 166, 255, 0.25)',
     borderRadius: '16px'
   },
-  headerIcon: {
-    fontSize: '40px'
+  achievementBtn: {
+    width: '56px',
+    height: '56px',
+    display: 'flex' as const,
+    flexDirection: 'column' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    gap: '2px',
+    background: 'linear-gradient(135deg, rgba(240, 136, 62, 0.2), rgba(240, 136, 62, 0.05))',
+    border: '1px solid rgba(240, 136, 62, 0.3)',
+    borderRadius: '12px',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    '&:hover': {
+      transform: 'scale(1.05)',
+      boxShadow: '0 0 20px rgba(240, 136, 62, 0.3)'
+    }
+  },
+  achievementIcon: {
+    fontSize: '24px'
+  },
+  achievementCount: {
+    fontSize: '12px',
+    fontWeight: 700,
+    color: '#f0883e'
+  },
+  headerMain: {
+    flex: 1
   },
   title: {
     fontSize: '22px',
@@ -169,6 +242,34 @@ const styles = {
   subtitle: {
     fontSize: '13px',
     color: '#8b949e'
+  },
+  headerRight: {},
+  achievementSummary: {
+    background: '#161b22',
+    border: '1px solid #30363d',
+    borderRadius: '10px',
+    padding: '10px 14px'
+  },
+  achievementSummaryRow: {
+    display: 'flex' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+    gap: '16px',
+    marginBottom: '4px',
+    '&:last-child': {
+      marginBottom: 0
+    }
+  },
+  achievementSummaryLabel: {
+    fontSize: '11px',
+    fontWeight: 600,
+    color: '#8b949e',
+    textTransform: 'uppercase' as const
+  },
+  achievementSummaryValue: {
+    fontSize: '14px',
+    fontWeight: 700,
+    color: '#f0883e'
   },
   statsGrid: {
     display: 'grid' as const,

@@ -58,6 +58,34 @@ export interface ExportData {
   version: string;
   exportTime: string;
   records: GameRecord[];
+  achievements: AchievementState[];
+}
+
+export interface Achievement {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  hidden: boolean;
+  type: 'win' | 'stat' | 'play' | 'special';
+  check?: (stats: AchievementCheckStats) => boolean;
+}
+
+export interface AchievementState {
+  id: string;
+  unlocked: boolean;
+  unlockedAt?: number;
+}
+
+export interface AchievementCheckStats {
+  totalGames: number;
+  totalWins: number;
+  bestHundredDayReturn: number;
+  bestFinalAssets: number;
+  shortestWinDays: number;
+  totalPlayDays: number;
+  totalFinalAssets: number;
+  totalGameDays: number;
 }
 
 export interface Item {

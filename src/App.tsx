@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef } from 'react';
 import { useGameState } from './hooks/useGameState';
 import { useGameStats } from './hooks/useGameStats';
+import { useAchievements } from './hooks/useAchievements';
 import { StartScreen } from './components/StartScreen';
 import { TopBar } from './components/TopBar';
 import { Sidebar } from './components/Sidebar';
@@ -49,6 +50,16 @@ function App() {
     importData,
     mergeRecords
   } = useGameStats();
+
+  const {
+    achievements,
+    states: achievementStates,
+    newUnlocks,
+    unlockedBasic,
+    totalBasic,
+    unlockedHidden,
+    totalHidden
+  } = useAchievements(records);
 
   const hasSavedGameRef = useRef(false);
 
@@ -203,6 +214,15 @@ function App() {
             <ProfilePage
               records={records}
               stats={stats}
+              achievementStats={{
+                unlockedBasic,
+                totalBasic,
+                unlockedHidden,
+                totalHidden
+              }}
+              achievements={achievements}
+              achievementStates={achievementStates}
+              newUnlocks={newUnlocks}
             />
           )}
           {gameState.currentPage === 'settings' && (
