@@ -1,5 +1,6 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { useGameState } from './hooks/useGameState';
+import { useGameStats } from './hooks/useGameStats';
 import { StartScreen } from './components/StartScreen';
 import { TopBar } from './components/TopBar';
 import { Sidebar } from './components/Sidebar';
@@ -9,6 +10,7 @@ import { NewsPage } from './components/NewsPage';
 import { ShopPage } from './components/ShopPage';
 import { BagPage } from './components/BagPage';
 import { BankPage } from './components/BankPage';
+import { ProfilePage } from './components/ProfilePage';
 import { TradeModal } from './components/TradeModal';
 import { SettlementModal } from './components/SettlementModal';
 import { BankruptcyAlert } from './components/BankruptcyAlert';
@@ -37,6 +39,18 @@ function App() {
     constants
   } = useGameState();
 
+  const {
+    records,
+    stats,
+    addRecord,
+    clearRecords,
+    exportData,
+    importData,
+    mergeRecords
+  } = useGameStats();
+
+  const hasSavedGameRef = useRef(false);
+
   const [showTradeModal, setShowTradeModal] = React.useState(false);
   const [tradeStockCode, setTradeStockCode] = React.useState<string>('');
   const [tradeType, setTradeType] = React.useState<'buy' | 'sell'>('buy');
@@ -59,6 +73,27 @@ function App() {
     }
   }, [buyStock, sellStock]);
 
+  // 保存游戏记录
+  useEffect(() => {
+    if (gameState.isGameOver && gameState.gameResult && !hasSavedGameRef.current) {
+      hasSavedGameRef.current = true;
+      const hundredDayReturn = gameState.currentDay > 0
+        ? (totalProfitPercent / gameState.currentDay) * 100
+        : 0;
+      addRecord({
+        isWin: gameState.gameResult === 'win',
+        gameOverReason: gameState.gameOverReason,
+        days: gameState.currentDay,
+        finalAssets: totalAssets,
+        totalProfitPercent,
+        hundredDayReturn,
+      });
+    }
+    if (!gameState.isGameOver) {
+      hasSavedGameRef.current = false;
+    }
+  }, [gameState.isGameOver, gameState.gameResult, gameState.currentDay, totalAssets, totalProfitPercent, addRecord]);
+
   // 键盘快捷键
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -74,6 +109,12 @@ function App() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [gameState.isStarted, gameState.isGameOver, showTradeModal, nextPhase]);
+
+  // 处理导入
+  const handleImport = useCallback(async (file: File) => {
+    const importedRecords = await importData(file);
+    mergeRecords(importedRecords);
+  }, [importData, mergeRecords]);
 
   if (!gameState.isStarted) {
     return <StartScreen onStart={startGame} />;
@@ -155,6 +196,15 @@ function App() {
               onRepayLoan={repayLoan}
             />
           )}
+          {gameState.currentPage === 'profile' && (
+            <ProfilePage
+              records={records}
+              stats={stats}
+              onExport={exportData}
+              onImport={handleImport}
+              onClear={clearRecords}
+            />
+          )}
         </div>
       </div>
 
@@ -177,6 +227,8 @@ function App() {
           days={gameState.currentDay}
           gameOverReason={gameState.gameOverReason}
           onRestart={restartGame}
+          historicalStats={stats}
+          hundredDayReturn={gameState.currentDay > 0 ? (totalProfitPercent / gameState.currentDay) * 100 : 0}
         />
       )}
 

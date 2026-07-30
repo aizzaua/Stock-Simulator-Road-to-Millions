@@ -40,7 +40,25 @@ export interface News {
 
 export type StockSector = 'tech' | 'consumer' | 'entertainment';
 export type GamePhase = 'opening' | 'lunch' | 'closing';
-export type PageType = 'market' | 'portfolio' | 'news' | 'shop' | 'bag' | 'bank';
+export type PageType = 'market' | 'portfolio' | 'news' | 'shop' | 'bag' | 'bank' | 'profile';
+
+export interface GameRecord {
+  id: string;
+  startTime: number;
+  endTime: number;
+  isWin: boolean;
+  gameOverReason?: 'timeout' | 'poison' | 'bankruptcy' | null;
+  days: number;
+  finalAssets: number;
+  totalProfitPercent: number;
+  hundredDayReturn: number;
+}
+
+export interface ExportData {
+  version: string;
+  exportTime: string;
+  records: GameRecord[];
+}
 
 export interface Item {
   id: string;
