@@ -1,5 +1,5 @@
 import React from 'react';
-import { StockHistory, Holding, GamePhase } from '../types';
+import { StockHistory, Holding, GamePhase, News, BlackSwanEvent } from '../types';
 import { STOCKS } from '../data/stocks';
 import { formatCurrency, formatPercent } from '../utils/format';
 import { KLineChart } from './KLineChart';
@@ -11,6 +11,10 @@ interface MarketPageProps {
   holdings: Holding[];
   cash: number;
   currentPhase: GamePhase;
+  currentDay: number;
+  dailyImpact: { [code: string]: number };
+  newsList: News[];
+  blackSwanEvent: BlackSwanEvent | null;
   onSelect: (code: string) => void;
   onOpenTrade: (code: string, type: 'buy' | 'sell') => void;
 }
@@ -21,6 +25,10 @@ export const MarketPage: React.FC<MarketPageProps> = ({
   holdings,
   cash,
   currentPhase,
+  currentDay,
+  dailyImpact,
+  newsList,
+  blackSwanEvent,
   onSelect,
   onOpenTrade
 }) => {
@@ -51,6 +59,23 @@ export const MarketPage: React.FC<MarketPageProps> = ({
   const changePercent = getChangePercent();
   const totalChangePercent = getTotalChangePercent();
   const changeColor = changePercent >= 0 ? '#3fb950' : '#f85149';
+
+  // 计算行业景气度
+  const getSentiment = () => {
+    const impact = dailyImpact[selectedCode] || 0;
+    if (impact > 0.03) return { text: '🔥 火热', color: '#f85149' };
+    if (impact > 0) return { text: '📈 向好', color: '#3fb950' };
+    if (impact < -0.03) return { text: '❄️ 寒冷', color: '#58a6ff' };
+    if (impact < 0) return { text: '📉 疲软', color: '#f0883e' };
+    return { text: '➖ 平稳', color: '#8b949e' };
+  };
+
+  const sentiment = getSentiment();
+  const daysHeld = holding ? currentDay - holding.purchaseDay : 0;
+  const dividendEligible = daysHeld >= 30;
+  const dailyDividend = dividendEligible && holding
+    ? currentPrice * holding.quantity * selectedStock.dividendYield
+    : 0;
 
   const canTrade = currentPhase !== 'lunch';
 
@@ -85,6 +110,71 @@ export const MarketPage: React.FC<MarketPageProps> = ({
                 {changePercent >= 0 ? '+' : ''}{formatPercent(changePercent)}
               </div>
             </div>
+          </div>
+
+          {/* 黑天鹅事件提示 */}
+          {blackSwanEvent && blackSwanEvent.stockCode === selectedCode && (
+            <div
+              style={{
+                ...styles.blackSwanBanner,
+                background: blackSwanEvent.impact > 0
+                  ? 'linear-gradient(135deg, rgba(63, 185, 80, 0.15), rgba(63, 185, 80, 0.05))'
+                  : 'linear-gradient(135deg, rgba(248, 81, 73, 0.15), rgba(248, 81, 73, 0.05))',
+                borderColor: blackSwanEvent.impact > 0 ? 'rgba(63, 185, 80, 0.4)' : 'rgba(248, 81, 73, 0.4)'
+              }}
+            >
+              <span style={styles.blackSwanIcon}>🦢</span>
+              <div style={styles.blackSwanContent}>
+                <div style={{
+                  ...styles.blackSwanTitle,
+                  color: blackSwanEvent.impact > 0 ? '#3fb950' : '#f85149'
+                }}>
+                  黑天鹅事件
+                </div>
+                <div style={styles.blackSwanDesc}>
+                  {blackSwanEvent.impact > 0
+                    ? `${blackSwanEvent.stockName}突发重大利好，股价暴涨15%！`
+                    : `${blackSwanEvent.stockName}遭遇重大危机，股价暴跌15%！`}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 基本面信息 */}
+          <div style={styles.fundamentals}>
+            <div style={styles.fundRow}>
+              <div style={styles.fundItem}>
+                <span style={styles.fundLabel}>市盈率</span>
+                <span style={styles.fundValue}>{selectedStock.peRatio}</span>
+              </div>
+              <div style={styles.fundItem}>
+                <span style={styles.fundLabel}>分红率</span>
+                <span style={styles.fundValue}>{(selectedStock.dividendYield * 100).toFixed(2)}%</span>
+              </div>
+              <div style={styles.fundItem}>
+                <span style={styles.fundLabel}>行业景气</span>
+                <span style={{ ...styles.fundValue, color: sentiment.color }}>{sentiment.text}</span>
+              </div>
+            </div>
+            {holding && (
+              <div style={styles.fundRow}>
+                <div style={styles.fundItem}>
+                  <span style={styles.fundLabel}>持仓天数</span>
+                  <span style={styles.fundValue}>{daysHeld}天</span>
+                </div>
+                <div style={styles.fundItem}>
+                  <span style={styles.fundLabel}>分红状态</span>
+                  <span style={{
+                    ...styles.fundValue,
+                    color: dividendEligible ? '#3fb950' : '#8b949e'
+                  }}>
+                    {dividendEligible
+                      ? `✓ 每30天分红${(selectedStock.dividendYield * 100).toFixed(1)}%（约${formatCurrency(currentPrice * holding.quantity * selectedStock.dividendYield)}）`
+                      : `再持${30 - daysHeld}天可分红`}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
           <div style={styles.statsRow}>
@@ -230,6 +320,38 @@ const styles = {
     fontSize: '14px',
     fontWeight: 600
   },
+  fundamentals: {
+    background: '#0d1117',
+    borderRadius: '10px',
+    padding: '12px 14px',
+    marginBottom: '12px',
+    border: '1px solid #30363d'
+  },
+  fundRow: {
+    display: 'flex' as const,
+    gap: '16px',
+    marginBottom: '8px',
+    '&:last-child': {
+      marginBottom: 0
+    }
+  },
+  fundItem: {
+    display: 'flex' as const,
+    alignItems: 'center' as const,
+    gap: '6px'
+  },
+  fundLabel: {
+    fontSize: '11px',
+    fontWeight: 600,
+    color: '#6e7681',
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.5px'
+  },
+  fundValue: {
+    fontSize: '13px',
+    fontWeight: 700,
+    color: '#f0f6fc'
+  },
   statsRow: {
     display: 'flex' as const,
     gap: '12px',
@@ -308,5 +430,33 @@ const styles = {
     color: '#f0883e',
     background: 'rgba(240, 136, 62, 0.1)',
     borderRadius: '10px'
+  },
+  blackSwanBanner: {
+    display: 'flex' as const,
+    alignItems: 'center' as const,
+    gap: '12px',
+    padding: '14px 16px',
+    borderRadius: '12px',
+    border: '2px solid',
+    marginBottom: '16px',
+    animation: 'pulse 2s infinite'
+  },
+  blackSwanIcon: {
+    fontSize: '32px',
+    flexShrink: 0
+  },
+  blackSwanContent: {
+    display: 'flex' as const,
+    flexDirection: 'column' as const,
+    gap: '4px'
+  },
+  blackSwanTitle: {
+    fontSize: '14px',
+    fontWeight: 800
+  },
+  blackSwanDesc: {
+    fontSize: '13px',
+    color: '#f0f6fc',
+    fontWeight: 500
   }
 };

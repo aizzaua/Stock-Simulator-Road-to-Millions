@@ -7,6 +7,8 @@ export interface Stock {
   trend: number;
   colorStart: string;
   colorEnd: string;
+  peRatio: number;
+  dividendYield: number;
 }
 
 export interface KLineData {
@@ -26,6 +28,7 @@ export interface Holding {
   code: string;
   quantity: number;
   avgCost: number;
+  purchaseDay: number;
 }
 
 export interface News {
@@ -107,6 +110,14 @@ export interface Loan {
   borrowedDay: number;
 }
 
+export interface BlackSwanEvent {
+  stockCode: string;
+  stockName: string;
+  impact: number; // +0.15 or -0.15
+  day: number;
+  phase: GamePhase;
+}
+
 export interface GameState {
   isStarted: boolean;
   isGameOver: boolean;
@@ -128,6 +139,7 @@ export interface GameState {
   hasAppliedLoan: boolean;
   hasTriggeredBankruptcy: boolean;
   showBankruptcyAlert: boolean;
+  blackSwanEvent: BlackSwanEvent | null;
 }
 
 export interface ToastMessage {

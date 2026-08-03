@@ -31,6 +31,7 @@ function App() {
     selectStock,
     buyStock,
     sellStock,
+    sellAllStocks,
     nextPhase,
     buyItem,
     useCrazyCola,
@@ -168,6 +169,10 @@ function App() {
               holdings={gameState.holdings}
               cash={gameState.cash}
               currentPhase={gameState.currentPhase}
+              currentDay={gameState.currentDay}
+              dailyImpact={gameState.dailyImpact}
+              newsList={gameState.newsList}
+              blackSwanEvent={gameState.blackSwanEvent}
               onSelect={selectStock}
               onOpenTrade={handleOpenTrade}
             />
@@ -176,7 +181,9 @@ function App() {
             <PortfolioPage
               holdings={gameState.holdings}
               stockHistory={gameState.stockHistory}
+              cash={gameState.cash}
               onOpenTrade={handleOpenTrade}
+              onSellAll={sellAllStocks}
             />
           )}
           {gameState.currentPage === 'news' && (
