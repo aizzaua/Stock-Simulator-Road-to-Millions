@@ -7,6 +7,12 @@ interface SettlementModalProps {
   days: number;
   gameOverReason?: 'timeout' | 'poison' | 'bankruptcy' | null;
   onRestart: () => void;
+  historicalStats?: {
+    totalGames: number;
+    wins: number;
+    avgHundredDayReturn: number;
+  };
+  hundredDayReturn?: number;
 }
 
 export const SettlementModal: React.FC<SettlementModalProps> = ({
@@ -14,11 +20,14 @@ export const SettlementModal: React.FC<SettlementModalProps> = ({
   finalAssets,
   days,
   gameOverReason,
-  onRestart
+  onRestart,
+  historicalStats,
+  hundredDayReturn = 0
 }) => {
   const totalProfit = finalAssets - 10000;
   const totalProfitPercent = ((finalAssets - 10000) / 10000) * 100;
   const profitColor = totalProfit >= 0 ? '#3fb950' : '#f85149';
+  const returnColor = hundredDayReturn >= 0 ? '#3fb950' : '#f85149';
 
   const getTitle = () => {
     if (isWin) {
@@ -78,7 +87,25 @@ export const SettlementModal: React.FC<SettlementModalProps> = ({
               {totalProfitPercent >= 0 ? '+' : ''}{formatPercent(totalProfitPercent)}
             </div>
           </div>
+          <div style={styles.stat}>
+            <div style={styles.statLabel}>百日收益率</div>
+            <div style={{ ...styles.statValue, color: returnColor }}>
+              {hundredDayReturn >= 0 ? '+' : ''}{formatPercent(hundredDayReturn)}
+            </div>
+          </div>
         </div>
+
+        {historicalStats && historicalStats.totalGames > 0 && (
+          <div style={styles.historicalNote}>
+            <span style={styles.noteIcon}>📊</span>
+            <span style={styles.noteText}>
+              历史记录：{historicalStats.totalGames} 局，{historicalStats.wins} 次通关
+              {historicalStats.avgHundredDayReturn !== 0 && (
+                <>，平均百日收益 {historicalStats.avgHundredDayReturn >= 0 ? '+' : ''}{formatPercent(historicalStats.avgHundredDayReturn)}</>
+              )}
+            </span>
+          </div>
+        )}
 
         {gameOverReason === 'poison' && (
           <div style={styles.poisonNote}>
@@ -155,8 +182,8 @@ const styles = {
   },
   stats: {
     display: 'grid' as const,
-    gridTemplateColumns: 'repeat(3, 1fr)',
-    gap: '16px',
+    gridTemplateColumns: 'repeat(4, 1fr)',
+    gap: '12px',
     marginBottom: '24px'
   },
   stat: {
@@ -200,12 +227,23 @@ const styles = {
     borderRadius: '12px',
     marginBottom: '24px'
   },
+  historicalNote: {
+    display: 'flex' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    gap: '8px',
+    padding: '12px 16px',
+    background: 'rgba(88, 166, 255, 0.1)',
+    border: '1px solid rgba(88, 166, 255, 0.2)',
+    borderRadius: '12px',
+    marginBottom: '24px'
+  },
   noteIcon: {
     fontSize: '18px'
   },
   noteText: {
     fontSize: '12px',
-    color: '#f85149',
+    color: '#8b949e',
     fontWeight: 600
   }
 };

@@ -10,7 +10,8 @@ import {
   BagItem,
   LotteryPrize,
   LotteryResult,
-  Loan
+  Loan,
+  BlackSwanEvent
 } from '../types';
 import { STOCKS } from '../data/stocks';
 import { SHOP_ITEMS, LOTTERY_CONFIGS, LOTTERY_ITEMS } from '../data/items';
@@ -22,7 +23,7 @@ import {
   generateLunchPrice,
   generateClosingPrice
 } from './useStockPrice';
-import { formatDate, calculateTotalAssets } from '../utils/format';
+import { formatDate, calculateTotalAssets, formatCurrency } from '../utils/format';
 import { randomId } from '../utils/random';
 
 const INITIAL_CASH = 10000;
@@ -32,6 +33,9 @@ const FEE_RATE = 0.001;
 const START_DATE = new Date('2023-01-03');
 const MAX_LOAN_AMOUNT = 10000;
 const LOAN_DURATION = 100;
+const LOAN_INTEREST_RATE = 0.03;
+const BLACK_SWAN_CHANCE = 3 / 750; // 约0.4%，750天期望触发3次（约一年一次）
+const BLACK_SWAN_IMPACT = 0.15; // ±15% 涨跌幅
 
 function getInitialState(): GameState {
   return {
@@ -54,7 +58,8 @@ function getInitialState(): GameState {
     loan: null,
     hasAppliedLoan: false,
     hasTriggeredBankruptcy: false,
-    showBankruptcyAlert: false
+    showBankruptcyAlert: false,
+    blackSwanEvent: null
   };
 }
 
@@ -131,7 +136,8 @@ export function useGameState() {
       stockHistory: historyWithToday,
       newsList: initialNews,
       selectedStockCode: STOCKS[0].code,
-      dailyImpact
+      dailyImpact,
+      blackSwanEvent: null
     });
   }, []);
 
@@ -187,7 +193,8 @@ export function useGameState() {
         newHoldings = [...prev.holdings, {
           code,
           quantity,
-          avgCost: price
+          avgCost: price,
+          purchaseDay: prev.currentDay
         }];
       }
 
@@ -233,7 +240,8 @@ export function useGameState() {
           newHoldings = [...prev.holdings];
           newHoldings[existingIndex] = {
             ...existing,
-            quantity: existing.quantity - quantity
+            quantity: existing.quantity - quantity,
+            purchaseDay: existing.purchaseDay
           };
         }
       } else {
@@ -250,6 +258,45 @@ export function useGameState() {
     const stockName = STOCKS.find(s => s.code === code)?.name || code;
     addToast('success', `成功卖出 ${stockName} ${quantity}股`);
     return true;
+  }, [gameState.holdings, gameState.stockHistory, addToast]);
+
+  // 一键清仓
+  const sellAllStocks = useCallback(() => {
+    if (gameState.holdings.length === 0) {
+      addToast('info', '当前没有持仓');
+      return;
+    }
+
+    let totalCashGained = 0;
+    let totalFee = 0;
+    const soldStocks: string[] = [];
+
+    for (const holding of gameState.holdings) {
+      const history = gameState.stockHistory[holding.code];
+      if (!history || history.length === 0) continue;
+
+      const price = history[history.length - 1].close;
+      const tradeAmount = price * holding.quantity;
+      const fee = tradeAmount * FEE_RATE;
+
+      totalCashGained += tradeAmount - fee;
+      totalFee += fee;
+
+      const stockName = STOCKS.find(s => s.code === holding.code)?.name || holding.code;
+      soldStocks.push(`${stockName} ${holding.quantity}股`);
+    }
+
+    setGameState(prev => ({
+      ...prev,
+      cash: prev.cash + totalCashGained,
+      holdings: []
+    }));
+
+    const detailText = soldStocks.length <= 2
+      ? soldStocks.join('、')
+      : `${soldStocks[0]}等${soldStocks.length}只股票`;
+
+    addToast('success', `一键清仓完成！卖出${detailText}，回笼资金 ${formatCurrency(totalCashGained)}（手续费 ${formatCurrency(totalFee)}）`);
   }, [gameState.holdings, gameState.stockHistory, addToast]);
 
   // 购买道具
@@ -448,6 +495,10 @@ export function useGameState() {
 
   // 申请破产贷款
   const applyForLoan = useCallback((amount: number) => {
+    if (gameState.cash > 0) {
+      addToast('error', '只有现金为0时才能申请贷款');
+      return false;
+    }
     if (gameState.hasAppliedLoan) {
       addToast('error', '一局游戏只能申请一次贷款');
       return false;
@@ -475,9 +526,9 @@ export function useGameState() {
       showBankruptcyAlert: false
     }));
 
-    addToast('success', `成功获得贷款 ${amount.toLocaleString()} 元！请在 ${LOAN_DURATION} 天内还清`);
+    addToast('success', `成功获得贷款 ${amount.toLocaleString()} 元！请在 ${LOAN_DURATION} 天内还清（含3%利息）`);
     return true;
-  }, [gameState.hasAppliedLoan, gameState.currentDay, addToast]);
+  }, [gameState.cash, gameState.hasAppliedLoan, gameState.currentDay, addToast]);
 
   // 还款
   const repayLoan = useCallback(() => {
@@ -485,18 +536,19 @@ export function useGameState() {
       addToast('error', '没有未偿还的贷款');
       return false;
     }
-    if (gameState.cash < gameState.loan.amount) {
-      addToast('error', '现金不足以偿还贷款');
+    const repayAmount = Math.ceil(gameState.loan.amount * (1 + LOAN_INTEREST_RATE));
+    if (gameState.cash < repayAmount) {
+      addToast('error', `现金不足以偿还贷款（需要 ${repayAmount.toLocaleString()} 元）`);
       return false;
     }
 
     setGameState(prev => ({
       ...prev,
-      cash: prev.cash - prev.loan!.amount,
+      cash: prev.cash - repayAmount,
       loan: null
     }));
 
-    addToast('success', '贷款已还清！');
+    addToast('success', `贷款已还清！偿还金额 ${repayAmount.toLocaleString()} 元（含3%利息）`);
     return true;
   }, [gameState.loan, gameState.cash, addToast]);
 
@@ -596,6 +648,27 @@ export function useGameState() {
           }
         }
 
+        // 计算分红（持有满30天的倍数时一次性发放）
+        let dividendTotal = 0;
+        const dividendDetails: string[] = [];
+        for (const holding of prev.holdings) {
+          const daysHeld = prev.currentDay - holding.purchaseDay;
+          // 每满30天发放一次分红（30天、60天、90天...）
+          if (daysHeld > 0 && daysHeld % 30 === 0) {
+            const stock = STOCKS.find(s => s.code === holding.code);
+            const history = prev.stockHistory[holding.code];
+            if (stock && history && history.length > 0) {
+              const currentPrice = history[history.length - 1].close;
+              // 30天累积分红 = 股价 * 数量 * 分红率
+              const dividend = currentPrice * holding.quantity * stock.dividendYield;
+              if (dividend > 0) {
+                dividendTotal += dividend;
+                dividendDetails.push(`${stock.name} ${formatCurrency(dividend)}`);
+              }
+            }
+          }
+        }
+
         // 更新昨日资产
         setYesterdayAssets(currentTotalAssets);
 
@@ -624,14 +697,103 @@ export function useGameState() {
         let newHistory = generateNextDayKLine(prev.stockHistory, dailyImpact);
         newHistory = generateOpeningPrice(newHistory, dailyImpact);
 
+        // ===== 黑天鹅事件 =====
+        let blackSwanEvent: BlackSwanEvent | null = null;
+        let blackSwanNews: News | null = null;
+        if (Math.random() < BLACK_SWAN_CHANCE) {
+          const targetStock = STOCKS[Math.floor(Math.random() * STOCKS.length)];
+          const isPositive = Math.random() < 0.5;
+          const impact = isPositive ? BLACK_SWAN_IMPACT : -BLACK_SWAN_IMPACT;
+
+          // 修改该股票当日K线
+          const history = newHistory[targetStock.code];
+          if (history && history.length > 0) {
+            const lastKline = history[history.length - 1];
+            const newClose = lastKline.close * (1 + impact);
+            const newHigh = Math.max(lastKline.high, newClose);
+            const newLow = Math.min(lastKline.low, newClose);
+
+            newHistory = {
+              ...newHistory,
+              [targetStock.code]: [
+                ...history.slice(0, -1),
+                {
+                  ...lastKline,
+                  close: newClose,
+                  high: newHigh,
+                  low: newLow
+                }
+              ]
+            };
+
+            // 更新 dailyImpact
+            dailyImpact[targetStock.code] = (dailyImpact[targetStock.code] || 0) + impact;
+
+            blackSwanEvent = {
+              stockCode: targetStock.code,
+              stockName: targetStock.name,
+              impact,
+              day: nextDay,
+              phase: 'opening'
+            };
+
+            // 生成黑天鹅新闻
+            blackSwanNews = {
+              id: randomId(),
+              date: dateStr,
+              type: isPositive ? 'good' : 'bad',
+              title: isPositive
+                ? `【黑天鹅】${targetStock.name}突发重大利好`
+                : `【黑天鹅】${targetStock.name}遭遇重大危机`,
+              content: isPositive
+                ? `市场传闻${targetStock.name}将获得巨额订单，股价应声暴涨${(BLACK_SWAN_IMPACT * 100).toFixed(0)}%！`
+                : `突传${targetStock.name}核心产品出现重大问题，股价暴跌${(BLACK_SWAN_IMPACT * 100).toFixed(0)}%！`,
+              relatedStock: targetStock.code,
+              impact
+            };
+          }
+        }
+
+        // 构建分红提示
+        const newToasts = [...prev.toasts];
+        if (dividendTotal > 0) {
+          const detailText = dividendDetails.length <= 2
+            ? dividendDetails.join('、')
+            : `${dividendDetails[0]}等${dividendDetails.length}只股票`;
+          newToasts.unshift({
+            id: randomId(),
+            type: 'success' as const,
+            message: `💰 分红到账 ${formatCurrency(dividendTotal)}（${detailText}）`
+          });
+        }
+
+        // 如果有黑天鹅新闻，插入到新闻列表最前面
+        const allNews = blackSwanNews
+          ? [blackSwanNews, ...news, ...prev.newsList]
+          : [...news, ...prev.newsList];
+
+        // 黑天鹅 Toast
+        if (blackSwanEvent) {
+          newToasts.unshift({
+            id: randomId(),
+            type: blackSwanEvent.impact > 0 ? 'success' : 'error',
+            message: blackSwanEvent.impact > 0
+              ? `🦢 黑天鹅！${blackSwanEvent.stockName}暴涨${(BLACK_SWAN_IMPACT * 100).toFixed(0)}%！`
+              : `🦢 黑天鹅！${blackSwanEvent.stockName}暴跌${(BLACK_SWAN_IMPACT * 100).toFixed(0)}%！`
+          });
+        }
+
         newState = {
           ...prev,
           currentDay: nextDay,
           currentPhase: 'opening',
           currentDate: dateStr,
           stockHistory: newHistory,
-          newsList: [...news, ...prev.newsList].slice(0, 50),
-          dailyImpact
+          newsList: allNews.slice(0, 50),
+          dailyImpact,
+          cash: prev.cash + dividendTotal,
+          toasts: newToasts.slice(0, 5),
+          blackSwanEvent
         };
       }
 
@@ -681,6 +843,7 @@ export function useGameState() {
     selectStock,
     buyStock,
     sellStock,
+    sellAllStocks,
     nextPhase,
     getHolding,
     getCurrentPrice,

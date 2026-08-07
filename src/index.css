@@ -316,6 +316,15 @@ body {
   }
 }
 
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(240, 136, 62, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(240, 136, 62, 0);
+  }
+}
+
 .animate-slide-in-right {
   animation: slideInRight 0.3s ease;
 }

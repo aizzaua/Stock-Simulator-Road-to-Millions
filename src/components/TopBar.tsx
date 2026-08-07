@@ -1,15 +1,25 @@
 import React from 'react';
-import { GamePhase } from '../types';
+import { GamePhase, PageType } from '../types';
 
 interface TopBarProps {
   date: string;
   day: number;
   totalDays: number;
   phase: GamePhase;
-  onNext: () => void;
+  currentPage: PageType;
+  onPageChange: (page: PageType) => void;
+  onNext?: () => void;
 }
 
-export const TopBar: React.FC<TopBarProps> = ({ date, day, totalDays, phase, onNext }) => {
+export const TopBar: React.FC<TopBarProps> = ({
+  date,
+  day,
+  totalDays,
+  phase,
+  currentPage,
+  onPageChange,
+  onNext
+}) => {
   const getPhaseText = (p: GamePhase) => {
     switch (p) {
       case 'opening':
@@ -22,6 +32,25 @@ export const TopBar: React.FC<TopBarProps> = ({ date, day, totalDays, phase, onN
 
   const phaseInfo = getPhaseText(phase);
 
+  const handleProfileClick = () => {
+    if (currentPage === 'profile') {
+      onPageChange('market');
+    } else {
+      onPageChange('profile');
+    }
+  };
+
+  const handleSettingsClick = () => {
+    if (currentPage === 'settings') {
+      onPageChange('market');
+    } else {
+      onPageChange('settings');
+    }
+  };
+
+  const isProfileActive = currentPage === 'profile';
+  const isSettingsActive = currentPage === 'settings';
+
   return (
     <div style={styles.container}>
       <div style={styles.left}>
@@ -32,12 +61,36 @@ export const TopBar: React.FC<TopBarProps> = ({ date, day, totalDays, phase, onN
         </span>
       </div>
       <div style={styles.right}>
+        {onNext && (
+          <button
+            className="btn btn-primary"
+            onClick={onNext}
+            style={styles.nextButton}
+          >
+            ⏭️ 下一步
+          </button>
+        )}
         <button
-          className="btn btn-primary"
-          onClick={onNext}
-          style={styles.nextButton}
+          className="btn"
+          style={{
+            ...styles.iconButton,
+            ...(isProfileActive ? styles.iconButtonActive : {})
+          }}
+          onClick={handleProfileClick}
+          title="个人统计"
         >
-          ⏭️ 下一步
+          📊
+        </button>
+        <button
+          className="btn"
+          style={{
+            ...styles.iconButton,
+            ...(isSettingsActive ? styles.iconButtonActive : {})
+          }}
+          onClick={handleSettingsClick}
+          title="设置"
+        >
+          ⚙️
         </button>
       </div>
     </div>
@@ -72,9 +125,30 @@ const styles = {
   right: {
     display: 'flex' as const,
     alignItems: 'center' as const,
-    gap: '12px'
+    gap: '10px'
   },
   nextButton: {
-    gap: '8px'
+    padding: '8px 16px',
+    fontSize: '13px',
+    fontWeight: 700
+  },
+  iconButton: {
+    width: '40px',
+    height: '40px',
+    padding: 0,
+    display: 'flex' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    fontSize: '18px',
+    borderRadius: '10px',
+    background: 'transparent',
+    border: '1px solid transparent',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    fontFamily: 'inherit'
+  },
+  iconButtonActive: {
+    background: 'rgba(88, 166, 255, 0.15)',
+    borderColor: '#58a6ff'
   }
 };

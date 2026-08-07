@@ -1,28 +1,80 @@
 import React from 'react';
 import { Holding, StockHistory } from '../types';
-import { STOCKS } from '../data/stocks';
+import { STOCKS, SECTOR_INFO } from '../data/stocks';
 import {
   formatCurrency,
   formatPercent,
-  calculateHoldingProfit
+  calculateHoldingProfit,
+  calculateTotalAssets
 } from '../utils/format';
 
 interface PortfolioPageProps {
   holdings: Holding[];
   stockHistory: StockHistory;
+  cash: number;
   onOpenTrade: (code: string, type: 'buy' | 'sell') => void;
+  onSellAll: () => void;
 }
 
 export const PortfolioPage: React.FC<PortfolioPageProps> = ({
   holdings,
   stockHistory,
-  onOpenTrade
+  cash,
+  onOpenTrade,
+  onSellAll
 }) => {
   const getCurrentPrice = (code: string) => {
     const history = stockHistory[code];
     if (!history || history.length === 0) return 0;
     return history[history.length - 1].close;
   };
+
+  // 计算总资产和持仓市值
+  const totalAssets = calculateTotalAssets(cash, holdings, stockHistory);
+  const totalMarketValue = holdings.reduce((sum, h) => {
+    return sum + getCurrentPrice(h.code) * h.quantity;
+  }, 0);
+
+  // 计算板块分布
+  const sectorDistribution = React.useMemo(() => {
+    const distribution: Record<string, { value: number; label: string; color: string }> = {};
+
+    for (const holding of holdings) {
+      const stock = STOCKS.find(s => s.code === holding.code);
+      if (!stock) continue;
+
+      const marketValue = getCurrentPrice(holding.code) * holding.quantity;
+      if (!distribution[stock.sector]) {
+        distribution[stock.sector] = {
+          value: 0,
+          label: SECTOR_INFO[stock.sector].label,
+          color: stock.sector === 'tech' ? '#58a6ff' : stock.sector === 'consumer' ? '#3fb950' : '#f0883e'
+        };
+      }
+      distribution[stock.sector].value += marketValue;
+    }
+
+    return Object.values(distribution).map(item => ({
+      ...item,
+      percent: totalMarketValue > 0 ? (item.value / totalMarketValue) * 100 : 0
+    })).sort((a, b) => b.value - a.value);
+  }, [holdings, stockHistory, totalMarketValue]);
+
+  // 计算持仓集中度
+  const concentrationData = React.useMemo(() => {
+    return holdings.map(holding => {
+      const stock = STOCKS.find(s => s.code === holding.code);
+      const currentPrice = getCurrentPrice(holding.code);
+      const marketValue = currentPrice * holding.quantity;
+      return {
+        code: holding.code,
+        name: stock?.name || holding.code,
+        marketValue,
+        percent: totalAssets > 0 ? (marketValue / totalAssets) * 100 : 0,
+        color: stock?.colorStart || '#8b949e'
+      };
+    }).sort((a, b) => b.marketValue - a.marketValue);
+  }, [holdings, stockHistory, totalAssets]);
 
   if (holdings.length === 0) {
     return (
@@ -41,7 +93,88 @@ export const PortfolioPage: React.FC<PortfolioPageProps> = ({
       <div style={styles.header}>
         <div>
           <h2 style={styles.title}>我的持仓</h2>
-          <p style={styles.subtitle}>管理你的投资组合</p>
+          <p style={styles.subtitle}>
+            持仓市值 {formatCurrency(totalMarketValue)} / 总资产 {formatCurrency(totalAssets)}
+          </p>
+        </div>
+        <button
+          className="btn btn-danger"
+          style={{ padding: '8px 20px', fontSize: '13px' }}
+          onClick={onSellAll}
+        >
+          🚨 一键清仓
+        </button>
+      </div>
+
+      {/* 投资组合分析 */}
+      <div style={styles.analysisSection}>
+        <h3 style={styles.analysisTitle}>📊 投资组合分析</h3>
+        <div style={styles.analysisGrid}>
+          {/* 持仓集中度 */}
+          <div style={styles.analysisCard}>
+            <div style={styles.analysisCardTitle}>持仓集中度</div>
+            <div style={styles.analysisCardSubtitle}>占总资产比例</div>
+            <div style={styles.barList}>
+              {concentrationData.map(item => (
+                <div key={item.code} style={styles.barItem}>
+                  <div style={styles.barLabel}>
+                    <span style={styles.barName}>{item.name}</span>
+                    <span style={styles.barPercent}>{item.percent.toFixed(1)}%</span>
+                  </div>
+                  <div style={styles.barTrack}>
+                    <div
+                      style={{
+                        ...styles.barFill,
+                        width: `${Math.min(item.percent, 100)}%`,
+                        background: item.color
+                      }}
+                    />
+                  </div>
+                  <div style={styles.barValue}>{formatCurrency(item.marketValue)}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 板块分布 */}
+          <div style={styles.analysisCard}>
+            <div style={styles.analysisCardTitle}>板块分布</div>
+            <div style={styles.analysisCardSubtitle}>按行业分类</div>
+            <div style={styles.sectorList}>
+              {sectorDistribution.map(item => (
+                <div key={item.label} style={styles.sectorItem}>
+                  <div style={styles.sectorHeader}>
+                    <span style={styles.sectorLabel}>{item.label}</span>
+                    <span style={{ ...styles.sectorPercent, color: item.color }}>
+                      {item.percent.toFixed(1)}%
+                    </span>
+                  </div>
+                  <div style={styles.sectorTrack}>
+                    <div
+                      style={{
+                        ...styles.sectorFill,
+                        width: `${Math.min(item.percent, 100)}%`,
+                        background: item.color
+                      }}
+                    />
+                  </div>
+                  <div style={styles.sectorValue}>{formatCurrency(item.value)}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* 板块投资建议 */}
+            <div style={styles.tipBox}>
+              <span style={styles.tipIcon}>💡</span>
+              <span style={styles.tipText}>
+                {sectorDistribution.length <= 1
+                  ? '持仓过于集中，建议分散投资降低风险'
+                  : sectorDistribution[0]?.percent > 60
+                    ? `${sectorDistribution[0].label}占比过高，注意板块风险`
+                    : '板块分布较均衡，继续保持'}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -135,6 +268,9 @@ const styles = {
     overflow: 'hidden'
   },
   header: {
+    display: 'flex' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'flex-start' as const,
     marginBottom: '20px'
   },
   title: {
@@ -147,6 +283,138 @@ const styles = {
     fontSize: '13px',
     color: '#8b949e',
     margin: '4px 0 0 0'
+  },
+  analysisSection: {
+    marginBottom: '20px'
+  },
+  analysisTitle: {
+    fontSize: '16px',
+    fontWeight: 700,
+    color: '#f0f6fc',
+    margin: '0 0 12px 0'
+  },
+  analysisGrid: {
+    display: 'grid' as const,
+    gridTemplateColumns: '1fr 1fr',
+    gap: '16px',
+    marginBottom: '8px'
+  },
+  analysisCard: {
+    background: '#161b22',
+    border: '1px solid #30363d',
+    borderRadius: '16px',
+    padding: '20px'
+  },
+  analysisCardTitle: {
+    fontSize: '15px',
+    fontWeight: 700,
+    color: '#f0f6fc',
+    marginBottom: '4px'
+  },
+  analysisCardSubtitle: {
+    fontSize: '12px',
+    color: '#6e7681',
+    marginBottom: '16px'
+  },
+  barList: {
+    display: 'flex' as const,
+    flexDirection: 'column' as const,
+    gap: '14px'
+  },
+  barItem: {
+    display: 'flex' as const,
+    flexDirection: 'column' as const,
+    gap: '6px'
+  },
+  barLabel: {
+    display: 'flex' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const
+  },
+  barName: {
+    fontSize: '13px',
+    fontWeight: 600,
+    color: '#f0f6fc'
+  },
+  barPercent: {
+    fontSize: '13px',
+    fontWeight: 700,
+    color: '#f0f6fc'
+  },
+  barTrack: {
+    height: '8px',
+    background: '#0d1117',
+    borderRadius: '4px',
+    overflow: 'hidden'
+  },
+  barFill: {
+    height: '100%',
+    borderRadius: '4px',
+    transition: 'width 0.5s ease'
+  },
+  barValue: {
+    fontSize: '12px',
+    color: '#6e7681',
+    textAlign: 'right' as const
+  },
+  sectorList: {
+    display: 'flex' as const,
+    flexDirection: 'column' as const,
+    gap: '14px'
+  },
+  sectorItem: {
+    display: 'flex' as const,
+    flexDirection: 'column' as const,
+    gap: '6px'
+  },
+  sectorHeader: {
+    display: 'flex' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const
+  },
+  sectorLabel: {
+    fontSize: '13px',
+    fontWeight: 600,
+    color: '#f0f6fc'
+  },
+  sectorPercent: {
+    fontSize: '13px',
+    fontWeight: 700
+  },
+  sectorTrack: {
+    height: '8px',
+    background: '#0d1117',
+    borderRadius: '4px',
+    overflow: 'hidden'
+  },
+  sectorFill: {
+    height: '100%',
+    borderRadius: '4px',
+    transition: 'width 0.5s ease'
+  },
+  sectorValue: {
+    fontSize: '12px',
+    color: '#6e7681',
+    textAlign: 'right' as const
+  },
+  tipBox: {
+    display: 'flex' as const,
+    alignItems: 'center' as const,
+    gap: '8px',
+    marginTop: '16px',
+    padding: '10px 12px',
+    background: 'rgba(240, 136, 62, 0.08)',
+    border: '1px solid rgba(240, 136, 62, 0.2)',
+    borderRadius: '10px'
+  },
+  tipIcon: {
+    fontSize: '16px',
+    flexShrink: 0
+  },
+  tipText: {
+    fontSize: '12px',
+    color: '#8b949e',
+    lineHeight: 1.5
   },
   grid: {
     display: 'grid' as const,

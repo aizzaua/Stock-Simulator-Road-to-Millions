@@ -22,7 +22,9 @@ export const BankPage: React.FC<BankPageProps> = ({
   const [loanAmount, setLoanAmount] = useState(10000);
 
   const daysRemaining = loan ? loan.dueDay - currentDay : 0;
-  const canRepay = loan && cash >= loan.amount;
+  const repayAmount = loan ? Math.ceil(loan.amount * 1.03) : 0;
+  const canRepay = loan && cash >= repayAmount;
+  const canApply = !hasAppliedLoan && cash === 0;
 
   const handleApply = () => {
     onApplyLoan(loanAmount);
@@ -45,7 +47,7 @@ export const BankPage: React.FC<BankPageProps> = ({
         <div style={styles.welcomeCard}>
           <div style={styles.welcomeTitle}>欢迎光临！</div>
           <div style={styles.welcomeDesc}>
-            本行提供<span style={styles.highlight}>零利率</span>破产贷款服务，助您度过难关！
+            本行提供<span style={styles.highlight}>低息</span>破产贷款服务，助您度过难关！
           </div>
         </div>
 
@@ -61,9 +63,9 @@ export const BankPage: React.FC<BankPageProps> = ({
               <span style={styles.statusLabel}>贷款资格</span>
               <span style={{
                 ...styles.statusValue,
-                color: !hasAppliedLoan ? '#3fb950' : '#f85149'
+                color: canApply ? '#3fb950' : '#f85149'
               }}>
-                {!hasAppliedLoan ? '✓ 可申请' : '✗ 已使用'}
+                {canApply ? '✓ 可申请' : hasAppliedLoan ? '✗ 已使用' : '✗ 现金不为0'}
               </span>
             </div>
             {loan && (
@@ -89,7 +91,7 @@ export const BankPage: React.FC<BankPageProps> = ({
             </div>
             <div style={styles.infoRow}>
               <span style={styles.infoLabel}>利率</span>
-              <span style={styles.infoValue}>0%（零利率）</span>
+              <span style={styles.infoValue}>3%（一次性利息）</span>
             </div>
             <div style={styles.infoRow}>
               <span style={styles.infoLabel}>期限</span>
@@ -127,14 +129,14 @@ export const BankPage: React.FC<BankPageProps> = ({
             <button
               className="btn btn-primary"
               style={styles.applyButton}
-              disabled={hasAppliedLoan}
+              disabled={!canApply}
               onClick={handleApply}
             >
-              {hasAppliedLoan ? '已申请过贷款' : '确认申请'}
+              {!canApply ? (hasAppliedLoan ? '已申请过贷款' : '请先将现金花完') : '确认申请'}
             </button>
-            {hasAppliedLoan && (
+            {!canApply && (
               <div style={styles.disabledHint}>
-                每局游戏只能申请一次贷款哦
+                {hasAppliedLoan ? '每局游戏只能申请一次贷款哦' : '只有现金为0时才能申请贷款'}
               </div>
             )}
           </div>
@@ -145,6 +147,10 @@ export const BankPage: React.FC<BankPageProps> = ({
               <div style={styles.loanInfoRow}>
                 <span style={styles.loanInfoLabel}>借款金额</span>
                 <span style={styles.loanInfoValue}>{formatCurrency(loan.amount)}</span>
+              </div>
+              <div style={styles.loanInfoRow}>
+                <span style={styles.loanInfoLabel}>利息（3%）</span>
+                <span style={styles.loanInfoValue}>{formatCurrency(repayAmount - loan.amount)}</span>
               </div>
               <div style={styles.loanInfoRow}>
                 <span style={styles.loanInfoLabel}>借款日期</span>
@@ -165,8 +171,8 @@ export const BankPage: React.FC<BankPageProps> = ({
                 </span>
               </div>
               <div style={styles.loanInfoRow}>
-                <span style={styles.loanInfoLabel}>待还金额</span>
-                <span style={styles.loanInfoValue}>{formatCurrency(loan.amount)}</span>
+                <span style={styles.loanInfoLabel}>待还金额（本+息）</span>
+                <span style={{ ...styles.loanInfoValue, color: '#f0883e' }}>{formatCurrency(repayAmount)}</span>
               </div>
             </div>
             <div style={styles.repayWarning}>
@@ -188,7 +194,7 @@ export const BankPage: React.FC<BankPageProps> = ({
             </button>
             {!canRepay && (
               <div style={styles.disabledHint}>
-                需要 {formatCurrency(loan.amount)} 才能还款，当前现金 {formatCurrency(cash)}
+                需要 {formatCurrency(repayAmount)} 才能还款，当前现金 {formatCurrency(cash)}
               </div>
             )}
           </div>
@@ -198,10 +204,11 @@ export const BankPage: React.FC<BankPageProps> = ({
         <div style={styles.infoCard}>
           <div style={styles.infoCardTitle}>📋 贷款须知</div>
           <ul style={styles.infoList}>
-            <li style={styles.infoListItem}>本贷款为<span style={styles.highlight}>零利率</span>福利贷款，不需要支付利息</li>
+            <li style={styles.infoListItem}>本贷款需支付<span style={styles.highlight}>3%</span>一次性利息</li>
             <li style={styles.infoListItem}>贷款必须在<span style={styles.highlight}>100天内</span>还清，到期未还将宣告破产</li>
             <li style={styles.infoListItem}>每局游戏<span style={styles.highlight}>只能申请一次</span>贷款，请谨慎决定</li>
             <li style={styles.infoListItem}>贷款后，可随时在本页面进行还款操作</li>
+            <li style={styles.infoListItem}>申请条件：<span style={styles.highlight}>现金为0</span>才能申请贷款</li>
             <li style={styles.infoListItem}>破产条件：没有持仓 + 没有彩票 + 买不起任何股票</li>
           </ul>
         </div>

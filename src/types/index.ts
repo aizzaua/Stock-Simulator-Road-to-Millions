@@ -7,6 +7,8 @@ export interface Stock {
   trend: number;
   colorStart: string;
   colorEnd: string;
+  peRatio: number;
+  dividendYield: number;
 }
 
 export interface KLineData {
@@ -26,6 +28,7 @@ export interface Holding {
   code: string;
   quantity: number;
   avgCost: number;
+  purchaseDay: number;
 }
 
 export interface News {
@@ -40,7 +43,53 @@ export interface News {
 
 export type StockSector = 'tech' | 'consumer' | 'entertainment';
 export type GamePhase = 'opening' | 'lunch' | 'closing';
-export type PageType = 'market' | 'portfolio' | 'news' | 'shop' | 'bag' | 'bank';
+export type PageType = 'market' | 'portfolio' | 'news' | 'shop' | 'bag' | 'bank' | 'profile' | 'settings';
+
+export interface GameRecord {
+  id: string;
+  startTime: number;
+  endTime: number;
+  isWin: boolean;
+  gameOverReason?: 'timeout' | 'poison' | 'bankruptcy' | null;
+  days: number;
+  finalAssets: number;
+  totalProfitPercent: number;
+  hundredDayReturn: number;
+}
+
+export interface ExportData {
+  version: string;
+  exportTime: string;
+  records: GameRecord[];
+  achievements: AchievementState[];
+}
+
+export interface Achievement {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  hidden: boolean;
+  type: 'win' | 'stat' | 'play' | 'special';
+  check?: (stats: AchievementCheckStats) => boolean;
+}
+
+export interface AchievementState {
+  id: string;
+  unlocked: boolean;
+  unlockedAt?: number;
+}
+
+export interface AchievementCheckStats {
+  totalGames: number;
+  totalWins: number;
+  bestHundredDayReturn: number;
+  bestFinalAssets: number;
+  shortestWinDays: number;
+  totalPlayDays: number;
+  totalFinalAssets: number;
+  totalGameDays: number;
+}
 
 export interface Item {
   id: string;
@@ -59,6 +108,14 @@ export interface Loan {
   amount: number;
   dueDay: number;
   borrowedDay: number;
+}
+
+export interface BlackSwanEvent {
+  stockCode: string;
+  stockName: string;
+  impact: number; // +0.15 or -0.15
+  day: number;
+  phase: GamePhase;
 }
 
 export interface GameState {
@@ -82,6 +139,7 @@ export interface GameState {
   hasAppliedLoan: boolean;
   hasTriggeredBankruptcy: boolean;
   showBankruptcyAlert: boolean;
+  blackSwanEvent: BlackSwanEvent | null;
 }
 
 export interface ToastMessage {
